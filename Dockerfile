@@ -1,20 +1,19 @@
-# Use Node.js 18 LTS as base image
-FROM node:18-slim
+FROM node:18-alpine
 
-# Install dependencies needed for Chromium to run
-RUN apt-get update && apt-get install -y \
-    wget \
-    gnupg \
+# Install Chromium and dependencies
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
     ca-certificates \
-    procps \
-    fonts-ipafont-gothic \
-    fonts-wqy-zenhei \
-    fonts-thai-tlwg \
-    fonts-kacst \
-    fonts-freefont-ttf \
-    libxss1 \
-    --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
+    ttf-freefont \
+    dumb-init
+
+# Set environment variables
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
+    PUPPETEER_DISABLE_DEV_SHM_USAGE=true
 
 # Create app directory
 WORKDIR /app
@@ -23,15 +22,16 @@ WORKDIR /app
 COPY package*.json ./
 COPY pnpm-lock.yaml ./
 
-# Install pnpm and dependencies (this will also download Chromium via puppeteer)
+# Install pnpm and dependencies (skip Chromium download since we installed it via apk)
 RUN npm install -g pnpm
-RUN PUPPETEER_SKIP_DOWNLOAD=false pnpm install --prod
+RUN pnpm install --prod
 
 # Copy application code
 COPY server.js ./
 
 # Create non-root user for security
-RUN groupadd -r pptruser && useradd -r -g pptruser -G audio,video pptruser \
+RUN addgroup -g 1001 -S pptruser \
+    && adduser -S -u 1001 -G pptruser pptruser \
     && mkdir -p /home/pptruser/Downloads \
     && chown -R pptruser:pptruser /home/pptruser \
     && chown -R pptruser:pptruser /app
@@ -44,7 +44,7 @@ EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/ || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
 
 # Start the application
-CMD ["node", "server.js"]
+CMD ["dumb-init", "node", "server.js"]
