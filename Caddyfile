@@ -1,0 +1,3 @@
+printer.skrapbook.app {
+    reverse_proxy screenshotter:8080
+}
