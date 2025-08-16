@@ -4,10 +4,37 @@ const puppeteer = require("puppeteer");
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// Security configuration - customize these values as needed
+const SECURITY_HEADER_NAME =
+  process.env.SECURITY_HEADER_NAME || "X-Screenshot-Token";
+const SECURITY_HEADER_VALUE =
+  process.env.SECURITY_HEADER_VALUE || "your-secret-token-here";
+
 let browser;
 let pagePool = [];
 const MAX_PAGES = 3;
 const PAGE_TTL = 60000;
+
+// Security middleware to validate required header
+function validateSecurityHeader(req, res, next) {
+  const headerValue = req.headers[SECURITY_HEADER_NAME.toLowerCase()];
+
+  if (!headerValue) {
+    return res.status(401).json({
+      error: "Missing security header",
+      message: `Required header: ${SECURITY_HEADER_NAME}`,
+    });
+  }
+
+  if (headerValue !== SECURITY_HEADER_VALUE) {
+    return res.status(403).json({
+      error: "Invalid security token",
+      message: "The provided security token is invalid",
+    });
+  }
+
+  next();
+}
 
 async function getBrowser() {
   if (!browser) {
@@ -69,7 +96,8 @@ setInterval(async () => {
   }
 }, 30000);
 
-app.get("/screenshot", async (req, res) => {
+// Apply security middleware to screenshot endpoint
+app.get("/screenshot", validateSecurityHeader, async (req, res) => {
   const {
     url,
     format = "jpg",
@@ -140,6 +168,11 @@ app.get("/screenshot", async (req, res) => {
   }
 });
 
+// Health check endpoint (no security required)
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 process.on("SIGINT", async () => {
   console.log("🛑 Shutting down...");
   if (browser) await browser.close();
@@ -148,4 +181,5 @@ process.on("SIGINT", async () => {
 
 app.listen(PORT, () => {
   console.log(`🚀 Screenshot service running on port ${PORT}`);
+  console.log(`🔒 Security header required: ${SECURITY_HEADER_NAME}`);
 });
