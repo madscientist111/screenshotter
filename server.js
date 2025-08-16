@@ -13,7 +13,7 @@ async function getBrowser() {
   if (!browser) {
     browser = await puppeteer.launch({
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      headless: "new"
+      headless: "new",
     });
     console.log("🚀 Browser launched");
   }
@@ -72,7 +72,7 @@ setInterval(async () => {
 app.get("/screenshot", async (req, res) => {
   const {
     url,
-    format = "png",
+    format = "jpg",
     full_page = "true",
     clip_x,
     clip_y,
@@ -81,7 +81,7 @@ app.get("/screenshot", async (req, res) => {
     selector,
     delay = 0,
     image_quality = 80,
-    timeout = 30
+    timeout = 30,
   } = req.query;
 
   if (!url) {
@@ -94,7 +94,7 @@ app.get("/screenshot", async (req, res) => {
 
     await page.goto(url, {
       waitUntil: "networkidle2",
-      timeout: parseInt(timeout) * 1000
+      timeout: parseInt(timeout) * 1000,
     });
 
     if (delay > 0) {
@@ -104,14 +104,17 @@ app.get("/screenshot", async (req, res) => {
     let screenshotOptions = {
       type: format === "jpg" ? "jpeg" : "png",
       fullPage: full_page === "true",
-      quality: format === "jpg" ? parseInt(image_quality) : undefined
+      quality: format === "jpg" ? parseInt(image_quality) : undefined,
     };
 
     // If selector is provided, screenshot that element
     if (selector) {
       const element = await page.$(selector);
       if (!element) throw new Error(`Selector not found: ${selector}`);
-      screenshotOptions = { ...screenshotOptions, clip: await element.boundingBox() };
+      screenshotOptions = {
+        ...screenshotOptions,
+        clip: await element.boundingBox(),
+      };
     }
 
     // If clip dimensions are provided
@@ -120,7 +123,7 @@ app.get("/screenshot", async (req, res) => {
         x: parseInt(clip_x) || 0,
         y: parseInt(clip_y) || 0,
         width: parseInt(clip_width),
-        height: parseInt(clip_height)
+        height: parseInt(clip_height),
       };
     }
 
