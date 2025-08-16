@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  screenshotter:
+    image: screenshotter
+    container_name: screenshotter
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
