@@ -1,17 +1,19 @@
 # Use Node.js 18 LTS as base image
 FROM node:18-slim
 
-# Install dependencies needed for Puppeteer
+# Install dependencies needed for Chromium to run
 RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
     ca-certificates \
     procps \
+    fonts-ipafont-gothic \
+    fonts-wqy-zenhei \
+    fonts-thai-tlwg \
+    fonts-kacst \
+    fonts-freefont-ttf \
     libxss1 \
-    && wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/googlechrome-linux-keyring.gpg \
-    && sh -c 'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/googlechrome-linux-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
-    && apt-get update \
-    && apt-get install -y google-chrome-stable fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
+    --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app directory
@@ -21,9 +23,9 @@ WORKDIR /app
 COPY package*.json ./
 COPY pnpm-lock.yaml ./
 
-# Install pnpm and dependencies
+# Install pnpm and dependencies (this will also download Chromium via puppeteer)
 RUN npm install -g pnpm
-RUN pnpm install --prod
+RUN PUPPETEER_SKIP_DOWNLOAD=false pnpm install --prod
 
 # Copy application code
 COPY server.js ./
